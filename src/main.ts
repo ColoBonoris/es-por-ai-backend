@@ -32,7 +32,7 @@ async function bootstrap() {
     })
   );
 
-  const port = configService.get<number>("PORT") ?? 3001;
+  const port = configService.get<number>("PORT") ?? 3000;
   await app.listen(port);
   Logger.log(`Es por AI API listening on http://localhost:${port}/api/v1`);
 }
