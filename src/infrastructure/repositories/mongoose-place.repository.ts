@@ -8,9 +8,11 @@ import {
 } from "@/domain/common/pagination";
 import type { Place, PlaceSubmission } from "@/domain/places/place.entity";
 import type {
+  CreateApprovedPlaceInput,
   CreatePlaceSubmissionInput,
   PlaceListQuery,
   PlaceRepository,
+  PlaceSubmissionListQuery,
   PlaceSubmissionRepository
 } from "@/domain/places/place.repository";
 import {
@@ -85,6 +87,26 @@ export class MongoosePlaceRepository implements PlaceRepository {
       return place ? [place] : [];
     });
   }
+
+  async createApproved(input: CreateApprovedPlaceInput): Promise<Place> {
+    const document = await this.placeModel.create({
+      id: input.id,
+      name: input.name,
+      address: input.address,
+      category: input.category,
+      description: input.description,
+      coordinates: input.coordinates,
+      badges: input.badges,
+      images: input.images,
+      image: input.images[0] ?? "",
+      hours: "",
+      rating: 0,
+      reviewCount: 0,
+      verified: true
+    });
+
+    return mapPlace(document);
+  }
 }
 
 @Injectable()
@@ -113,6 +135,11 @@ export class MongoosePlaceSubmissionRepository
     return mapPlaceSubmission(document);
   }
 
+  async findById(id: string): Promise<PlaceSubmission | null> {
+    const document = await this.placeSubmissionModel.findOne({ id }).exec();
+    return document ? mapPlaceSubmission(document) : null;
+  }
+
   async countByUserId(userId: string): Promise<number> {
     const objectId = toObjectId(userId);
 
@@ -121,6 +148,62 @@ export class MongoosePlaceSubmissionRepository
     }
 
     return this.placeSubmissionModel.countDocuments({ submittedBy: objectId }).exec();
+  }
+
+  async listPendingAdmin(query: PlaceSubmissionListQuery) {
+    const { page, pageSize, skip } = normalizePagination(query);
+    const filter: FilterQuery<PlaceSubmissionModel> = {
+      status: "pending"
+    };
+
+    if (query.query?.trim()) {
+      const regex = new RegExp(escapeRegex(query.query.trim()), "i");
+      filter.$or = [
+        { name: regex },
+        { address: regex },
+        { category: regex },
+        { description: regex }
+      ];
+    }
+
+    const [documents, total] = await Promise.all([
+      this.placeSubmissionModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(pageSize)
+        .exec(),
+      this.placeSubmissionModel.countDocuments(filter).exec()
+    ]);
+
+    return {
+      data: documents.map(mapPlaceSubmission),
+      pagination: createPaginationMeta(page, pageSize, total)
+    };
+  }
+
+  async markApproved(id: string): Promise<PlaceSubmission | null> {
+    const document = await this.placeSubmissionModel
+      .findOneAndUpdate(
+        { id, status: "pending" },
+        { status: "approved" },
+        { new: true }
+      )
+      .exec();
+
+    return document ? mapPlaceSubmission(document) : null;
+  }
+
+  async markRejected(id: string): Promise<PlaceSubmission | null> {
+    const document = await this.placeSubmissionModel
+      .findOneAndUpdate(
+        { id, status: "pending" },
+        { status: "rejected" },
+        { new: true }
+      )
+      .exec();
+
+    return document ? mapPlaceSubmission(document) : null;
   }
 }
 
@@ -154,6 +237,7 @@ function mapPlaceSubmission(document: PlaceSubmissionDocument): PlaceSubmission 
     address: object.address,
     category: object.category,
     description: object.description,
+    coordinates: object.coordinates,
     badges: object.badges,
     images: object.images,
     menuText: object.menuText,

@@ -14,7 +14,7 @@ export class RefreshTokenModel {
   @Prop({ required: true, index: true })
   expiresAt!: Date;
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   revokedAt?: Date | null;
 
   createdAt?: Date;

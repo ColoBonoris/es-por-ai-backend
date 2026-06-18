@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Types } from "mongoose";
 
 import type { AccessibilityFeature } from "@/domain/common/accessibility-feature";
+import type { Coordinates } from "@/domain/places/place.entity";
 
 export type PlaceSubmissionDocument = HydratedDocument<PlaceSubmissionModel>;
 
@@ -22,6 +23,9 @@ export class PlaceSubmissionModel {
   @Prop({ default: "" })
   description!: string;
 
+  @Prop({ type: Object })
+  coordinates?: Coordinates;
+
   @Prop({ type: [String], default: [] })
   badges!: AccessibilityFeature[];
 
@@ -31,8 +35,8 @@ export class PlaceSubmissionModel {
   @Prop()
   menuText?: string;
 
-  @Prop({ default: "pending" })
-  status!: "pending";
+  @Prop({ enum: ["pending", "approved", "rejected"], default: "pending" })
+  status!: "pending" | "approved" | "rejected";
 
   @Prop({ type: Types.ObjectId, ref: "UserModel", required: true, index: true })
   submittedBy!: Types.ObjectId;

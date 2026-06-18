@@ -4,9 +4,11 @@ import {
   IsIn,
   IsInt,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   Min,
+  ValidateNested,
   ValidateIf
 } from "class-validator";
 
@@ -63,6 +65,14 @@ export class PlaceListQueryDto {
   lng?: number;
 }
 
+class CoordinatesDto {
+  @IsNumber()
+  lat!: number;
+
+  @IsNumber()
+  lng!: number;
+}
+
 export class CreatePlaceDto {
   @IsString()
   name!: string;
@@ -76,6 +86,11 @@ export class CreatePlaceDto {
   @IsOptional()
   @IsString()
   description = "";
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => CoordinatesDto)
+  coordinates!: CoordinatesDto;
 
   @IsOptional()
   @IsArray()

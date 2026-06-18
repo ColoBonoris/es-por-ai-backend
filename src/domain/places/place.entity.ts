@@ -29,10 +29,13 @@ export interface PlaceSubmission {
   address: string;
   category: string;
   description: string;
+  coordinates?: Coordinates;
   badges: AccessibilityFeature[];
   images: string[];
   menuText?: string;
-  status: "pending";
+  status: "pending" | "approved" | "rejected";
   submittedAt: string;
   submittedBy: string;
 }
+
+export type AdminPlaceSubmissionListItem = PlaceSubmission;
