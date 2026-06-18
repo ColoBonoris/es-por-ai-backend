@@ -16,6 +16,7 @@ export interface CreateUserInput {
   email: string;
   passwordHash: string;
   role: UserRole;
+  owner?: boolean;
   preferences: UserPreferences;
   settings: UserSettings;
   avatar: string;

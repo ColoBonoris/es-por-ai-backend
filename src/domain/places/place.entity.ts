@@ -21,6 +21,8 @@ export interface Place {
   distance?: string;
   coordinates: Coordinates;
   isFavorite?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface PlaceSubmission {

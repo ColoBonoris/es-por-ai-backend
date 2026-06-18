@@ -25,6 +25,9 @@ export class UserModel {
   @Prop({ enum: UserRole, default: UserRole.CLIENT })
   role?: UserRole;
 
+  @Prop({ default: false, index: true })
+  owner?: boolean;
+
   @Prop({ required: true })
   avatar!: string;
 

@@ -117,6 +117,7 @@ function mapUser(document: UserDocument): User {
     email: object.email,
     passwordHash: object.passwordHash,
     role: normalizeUserRole(object.role),
+    owner: object.owner ?? false,
     avatar: object.avatar,
     preferences: object.preferences ?? defaultUserPreferences,
     settings: object.settings ?? defaultUserSettings,

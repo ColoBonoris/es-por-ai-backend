@@ -4,6 +4,7 @@ import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 
 import { AdminModule } from "@/presentation/admin/admin.module";
+import { AssistantModule } from "@/presentation/assistant/assistant.module";
 import { AuthModule } from "@/presentation/auth/auth.module";
 import { FavoritesModule } from "@/presentation/favorites/favorites.module";
 import { MetadataModule } from "@/presentation/metadata/metadata.module";
@@ -23,6 +24,7 @@ import { UsersModule } from "@/presentation/users/users.module";
       }
     ]),
     AuthModule,
+    AssistantModule,
     UsersModule,
     PlacesModule,
     FavoritesModule,

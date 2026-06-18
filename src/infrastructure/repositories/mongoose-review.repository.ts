@@ -30,6 +30,32 @@ export class MongooseReviewRepository implements ReviewRepository {
     return documents.map(mapReview);
   }
 
+  async listRecentForPlaces(
+    placeIds: string[],
+    limitPerPlace: number
+  ): Promise<Map<string, Review[]>> {
+    if (!placeIds.length || limitPerPlace < 1) {
+      return new Map();
+    }
+
+    const documents = await this.reviewModel
+      .find({ placeId: { $in: placeIds } })
+      .sort({ createdAt: -1 })
+      .exec();
+    const reviewsByPlaceId = new Map<string, Review[]>();
+
+    for (const review of documents.map(mapReview)) {
+      const reviews = reviewsByPlaceId.get(review.placeId) ?? [];
+
+      if (reviews.length < limitPerPlace) {
+        reviews.push(review);
+        reviewsByPlaceId.set(review.placeId, reviews);
+      }
+    }
+
+    return reviewsByPlaceId;
+  }
+
   async listRecent(limit: number): Promise<Review[]> {
     const documents = await this.reviewModel
       .find()

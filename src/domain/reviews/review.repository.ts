@@ -14,6 +14,7 @@ export interface CreateReviewInput {
 
 export interface ReviewRepository {
   listForPlace(placeId: string): Promise<Review[]>;
+  listRecentForPlaces(placeIds: string[], limitPerPlace: number): Promise<Map<string, Review[]>>;
   listRecent(limit: number): Promise<Review[]>;
   create(input: CreateReviewInput): Promise<Review>;
   countByUserId(userId: string): Promise<number>;

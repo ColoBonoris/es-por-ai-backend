@@ -20,6 +20,7 @@ const baseUser: User = {
   email: "maria@email.com",
   passwordHash: "hashed-password",
   role: UserRole.CLIENT,
+  owner: false,
   avatar: "MG",
   preferences: defaultUserPreferences,
   settings: defaultUserSettings

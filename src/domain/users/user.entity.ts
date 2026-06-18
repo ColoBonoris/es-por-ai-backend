@@ -27,6 +27,7 @@ export interface AuthUser {
   name: string;
   email: string;
   role: UserRole;
+  owner: boolean;
   preferences?: UserPreferences;
 }
 
@@ -36,6 +37,7 @@ export interface User {
   email: string;
   passwordHash: string;
   role: UserRole;
+  owner: boolean;
   avatar: string;
   preferences: UserPreferences;
   settings: UserSettings;
@@ -101,6 +103,8 @@ export function toAuthUser(user: User): AuthUser {
     id: user.id,
     name: user.name,
     email: user.email,
-    role: user.role
+    role: user.role,
+    owner: user.owner,
+    preferences: user.preferences
   };
 }

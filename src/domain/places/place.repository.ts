@@ -13,6 +13,38 @@ export interface PlaceListQuery extends PaginationQuery {
   features?: AccessibilityFeature[];
 }
 
+export type PlaceRecommendationSortField =
+  | "distance"
+  | "rating"
+  | "reviewCount"
+  | "createdAt"
+  | "verified"
+  | "name";
+
+export interface PlaceRecommendationSortCriterion {
+  field: PlaceRecommendationSortField;
+  direction: 1 | -1;
+}
+
+export interface PlaceRecommendationUserLocation {
+  lat: number;
+  lng: number;
+}
+
+export interface PlaceRecommendationQuery {
+  query?: string;
+  categories?: string[];
+  excludedCategories?: string[];
+  features?: AccessibilityFeature[];
+  excludedFeatures?: AccessibilityFeature[];
+  verified?: boolean;
+  minRating?: number;
+  minReviewCount?: number;
+  sort?: PlaceRecommendationSortCriterion[];
+  location?: PlaceRecommendationUserLocation;
+  limit: number;
+}
+
 export interface CreatePlaceSubmissionInput {
   name: string;
   address: string;
@@ -44,6 +76,7 @@ export interface PlaceRepository {
   list(query: PlaceListQuery): Promise<PaginatedResult<Place>>;
   findById(id: string): Promise<Place | null>;
   findManyByIds(ids: string[]): Promise<Place[]>;
+  listRecommendations(query: PlaceRecommendationQuery): Promise<Place[]>;
   createApproved(input: CreateApprovedPlaceInput): Promise<Place>;
 }
 

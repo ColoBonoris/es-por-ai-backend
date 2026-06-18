@@ -11,6 +11,8 @@ import type {
   CreateApprovedPlaceInput,
   CreatePlaceSubmissionInput,
   PlaceListQuery,
+  PlaceRecommendationQuery,
+  PlaceRecommendationSortCriterion,
   PlaceRepository,
   PlaceSubmissionListQuery,
   PlaceSubmissionRepository
@@ -37,25 +39,7 @@ export class MongoosePlaceRepository implements PlaceRepository {
 
   async list(query: PlaceListQuery) {
     const { page, pageSize, skip } = normalizePagination(query);
-    const filter: FilterQuery<PlaceModel> = {};
-
-    if (query.query?.trim()) {
-      const regex = new RegExp(escapeRegex(query.query.trim()), "i");
-      filter.$or = [
-        { name: regex },
-        { category: regex },
-        { description: regex },
-        { address: regex }
-      ];
-    }
-
-    if (query.category) {
-      filter.category = query.category;
-    }
-
-    if (query.features?.length) {
-      filter.badges = { $all: query.features };
-    }
+    const filter = buildPlaceFilter(query);
 
     const [documents, total] = await Promise.all([
       this.placeModel
@@ -88,6 +72,24 @@ export class MongoosePlaceRepository implements PlaceRepository {
     });
   }
 
+  async listRecommendations(query: PlaceRecommendationQuery): Promise<Place[]> {
+    const mongoSort = getMongoRecommendationSort(query.sort);
+    const needsDistanceSort = query.sort?.some((sort) => sort.field === "distance");
+    const candidateLimit = needsDistanceSort ? Math.max(query.limit * 10, 30) : query.limit;
+    const documentsQuery = this.placeModel
+      .find(buildPlaceFilter(query))
+      .limit(candidateLimit);
+
+    if (Object.keys(mongoSort).length) {
+      documentsQuery.sort(mongoSort);
+    }
+
+    const documents = await documentsQuery.exec();
+    const places = documents.map(mapPlace);
+
+    return sortPlaces(places, query).slice(0, query.limit);
+  }
+
   async createApproved(input: CreateApprovedPlaceInput): Promise<Place> {
     const document = await this.placeModel.create({
       id: input.id,
@@ -107,6 +109,178 @@ export class MongoosePlaceRepository implements PlaceRepository {
 
     return mapPlace(document);
   }
+}
+
+function buildPlaceFilter(query: {
+  query?: string;
+  category?: string;
+  categories?: string[];
+  excludedCategories?: string[];
+  features?: string[];
+  excludedFeatures?: string[];
+  verified?: boolean;
+  minRating?: number;
+  minReviewCount?: number;
+}): FilterQuery<PlaceModel> {
+  const filter: FilterQuery<PlaceModel> = {};
+
+  if (query.query?.trim()) {
+    const regex = new RegExp(escapeRegex(query.query.trim()), "i");
+    filter.$or = [
+      { name: regex },
+      { category: regex },
+      { description: regex },
+      { address: regex }
+    ];
+  }
+
+  const categoryFilter: { $eq?: string; $in?: string[]; $nin?: string[] } = {};
+
+  if (query.category) {
+    categoryFilter.$eq = query.category;
+  }
+  if (query.categories?.length) {
+    categoryFilter.$in = query.categories;
+  }
+  if (query.excludedCategories?.length) {
+    categoryFilter.$nin = query.excludedCategories;
+  }
+
+  if (Object.keys(categoryFilter).length) {
+    filter.category = categoryFilter;
+  }
+
+  const badgeFilter: { $all?: string[]; $nin?: string[] } = {};
+
+  if (query.features?.length) {
+    badgeFilter.$all = query.features;
+  }
+  if (query.excludedFeatures?.length) {
+    badgeFilter.$nin = query.excludedFeatures;
+  }
+
+  if (Object.keys(badgeFilter).length) {
+    filter.badges = badgeFilter;
+  }
+
+  if (query.verified !== undefined) {
+    filter.verified = query.verified;
+  }
+
+  if (query.minRating !== undefined) {
+    filter.rating = { $gte: query.minRating };
+  }
+
+  if (query.minReviewCount !== undefined) {
+    filter.reviewCount = { $gte: query.minReviewCount };
+  }
+
+  return filter;
+}
+
+function getMongoRecommendationSort(sort?: PlaceRecommendationSortCriterion[]) {
+  const mongoSort: Record<string, 1 | -1> = {};
+
+  for (const criterion of sort ?? []) {
+    if (criterion.field !== "distance") {
+      mongoSort[criterion.field] = criterion.direction;
+    }
+  }
+
+  return Object.keys(mongoSort).length
+    ? mongoSort
+    : ({ verified: -1, rating: -1, reviewCount: -1, name: 1 } as const);
+}
+
+function sortPlaces(places: Place[], query: PlaceRecommendationQuery) {
+  const sort = query.sort?.length
+    ? query.sort
+    : ([
+        { field: "verified", direction: -1 },
+        { field: "rating", direction: -1 },
+        { field: "reviewCount", direction: -1 },
+        { field: "name", direction: 1 }
+      ] satisfies PlaceRecommendationSortCriterion[]);
+
+  return [...places].sort((left, right) => {
+    for (const criterion of sort) {
+      const comparison = comparePlaces(left, right, criterion, query);
+
+      if (comparison !== 0) {
+        return comparison;
+      }
+    }
+
+    return left.name.localeCompare(right.name);
+  });
+}
+
+function comparePlaces(
+  left: Place,
+  right: Place,
+  criterion: PlaceRecommendationSortCriterion,
+  query: PlaceRecommendationQuery
+) {
+  if (criterion.field === "distance") {
+    if (!query.location) {
+      return 0;
+    }
+
+    return (
+      compareNumbers(
+        getDistanceKm(left, query.location),
+        getDistanceKm(right, query.location)
+      ) * criterion.direction
+    );
+  }
+
+  if (criterion.field === "name") {
+    return left.name.localeCompare(right.name) * criterion.direction;
+  }
+
+  return (
+    compareNumbers(getSortableValue(left, criterion.field), getSortableValue(right, criterion.field)) *
+    criterion.direction
+  );
+}
+
+function getSortableValue(
+  place: Place,
+  field: Exclude<PlaceRecommendationSortCriterion["field"], "distance" | "name">
+) {
+  if (field === "verified") {
+    return place.verified ? 1 : 0;
+  }
+
+  if (field === "createdAt") {
+    return place.createdAt?.getTime() ?? 0;
+  }
+
+  return place[field];
+}
+
+function compareNumbers(left: number, right: number) {
+  return left === right ? 0 : left > right ? 1 : -1;
+}
+
+function getDistanceKm(
+  place: Place,
+  origin: NonNullable<PlaceRecommendationQuery["location"]>
+) {
+  const earthRadiusKm = 6371;
+  const dLat = toRadians(place.coordinates.lat - origin.lat);
+  const dLng = toRadians(place.coordinates.lng - origin.lng);
+  const lat1 = toRadians(origin.lat);
+  const lat2 = toRadians(place.coordinates.lat);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function toRadians(value: number) {
+  return (value * Math.PI) / 180;
 }
 
 @Injectable()
@@ -224,7 +398,9 @@ export function mapPlace(document: PlaceDocument): Place {
     badges: object.badges,
     verified: object.verified,
     distance: object.distance,
-    coordinates: object.coordinates
+    coordinates: object.coordinates,
+    createdAt: object.createdAt,
+    updatedAt: object.updatedAt
   };
 }
 

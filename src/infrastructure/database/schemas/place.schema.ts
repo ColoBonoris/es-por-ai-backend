@@ -49,6 +49,9 @@ export class PlaceModel {
 
   @Prop({ type: Object, default: { lat: 0, lng: 0 } })
   coordinates!: Coordinates;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export const PlaceSchema = SchemaFactory.createForClass(PlaceModel);
