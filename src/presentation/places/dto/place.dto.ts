@@ -27,6 +27,10 @@ export class PlaceListQueryDto {
   category?: string;
 
   @IsOptional()
+  @IsIn(["recommended"])
+  filter?: "recommended";
+
+  @IsOptional()
   @Transform(({ value }: { value: unknown }): string[] | undefined => {
     if (Array.isArray(value)) {
       return value.flatMap((item) => String(item).split(","));

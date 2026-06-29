@@ -31,12 +31,13 @@ Response:
 
 - The endpoint always requires JWT auth.
 - `owner` is read from the user stored in MongoDB after validating the JWT.
-- Regular users never call Claude. They receive deterministic fallback recommendations.
+- Regular users never call Claude. They receive deterministic recommendations.
 - `owner=true` users can call Claude only when the provider is enabled by environment variables.
-- If 1 or 2 places match, those IDs are returned. Fallback is used only when the provider criteria return 0 places.
+- If 1 or 2 places match, those IDs are returned.
+- If Claude returns usable filters but MongoDB returns 0 matches, the backend returns deterministic fallback recommendations with a no-results message.
 - When Claude finds places, the backend sends sanitized place data plus up to 1 recent review per place to Claude for a short natural-language message.
 - For `owner=true`, Claude decides whether the prompt is app-related and safe through `isRelevant`.
-- For regular users, clearly unsafe or off-topic prompts use fallback without calling Claude.
+- For regular users, clearly unsafe or off-topic prompts use the not-understood fallback without calling Claude.
 - `message` is limited to 500 characters by backend validation.
 - `location` is optional. Distance sorting is ignored when it is missing.
 
@@ -111,7 +112,7 @@ The backend then:
 1. validates the JSON shape;
 2. removes categories, features, and sort values outside local allowlists;
 3. queries MongoDB through the repository;
-4. uses fallback recommendations if there are 0 matches;
+4. uses no-results fallback recommendations if there are 0 matches;
 5. fetches up to 1 recent review per matched place;
 6. asks Claude for a short natural-language message using sanitized place/review data;
 7. returns the message plus place IDs to the frontend.
@@ -161,6 +162,7 @@ Recommended production additions:
 - monitoring for provider failures and fallback rate;
 - feature flag per environment;
 - user-visible generic fallback when the provider is unavailable.
+- separate user-visible messages for not-understood prompts and valid searches with 0 database results.
 
 ## Cost recommendation
 

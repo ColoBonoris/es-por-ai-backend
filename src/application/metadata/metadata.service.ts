@@ -24,11 +24,6 @@ export const accessibilityFeatures: FeatureDefinition[] = [
     shortLabel: "Vegano"
   },
   {
-    id: "kosher",
-    label: "Kosher",
-    shortLabel: "Kosher"
-  },
-  {
     id: "pet_friendly",
     label: "Acepta mascotas",
     shortLabel: "Mascotas"
@@ -37,6 +32,21 @@ export const accessibilityFeatures: FeatureDefinition[] = [
     id: "visual_accessibility",
     label: "Accesibilidad visual",
     shortLabel: "Acc. visual"
+  },
+  {
+    id: "accessible_bathroom",
+    label: "Baño accesible",
+    shortLabel: "Baño accesible"
+  },
+  {
+    id: "ramp_available",
+    label: "Rampa disponible",
+    shortLabel: "Rampa"
+  },
+  {
+    id: "quiet_environment",
+    label: "Espacio silencioso",
+    shortLabel: "Silencioso"
   }
 ];
 
@@ -48,6 +58,9 @@ export const placeCategories = [
   "Heladería",
   "Comida saludable",
   "Librería",
+  "Farmacia",
+  "Supermercado",
+  "Centro cultural",
   "Otro"
 ];
 

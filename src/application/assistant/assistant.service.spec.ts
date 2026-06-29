@@ -81,7 +81,7 @@ describe("AssistantService", () => {
     placeRepository.listRecommendations.mockResolvedValue(places);
 
     await expect(service.reply(baseUser, "recomendame un lugar")).resolves.toEqual({
-      message: "No pude entender tu pregunta, pero podrían gustarte estos lugares",
+      message: "Podrían gustarte estos lugares.",
       recommendations: ["place-1", "place-2", "place-3"]
     });
     expect(chatbotProvider.analyzeMessage.mock.calls).toHaveLength(0);
@@ -160,12 +160,12 @@ describe("AssistantService", () => {
     placeRepository.listRecommendations.mockResolvedValue(places.slice(0, 2));
 
     await expect(service.reply(baseUser, "recomendame un cafe")).resolves.toEqual({
-      message: "No pude entender tu pregunta, pero podrían gustarte estos lugares",
+      message: "Podrían gustarte estos lugares.",
       recommendations: ["place-1", "place-2"]
     });
   });
 
-  it("falls back when provider criteria return no places", async () => {
+  it("uses no-results fallback when provider criteria return no places", async () => {
     placeRepository.listRecommendations
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce(places);
@@ -177,7 +177,8 @@ describe("AssistantService", () => {
     await expect(
       service.reply({ ...baseUser, owner: true }, "busco un bar")
     ).resolves.toEqual({
-      message: "No pude entender tu pregunta, pero podrían gustarte estos lugares",
+      message:
+        "No encontré resultados para esa búsqueda, pero podrían gustarte estos lugares",
       recommendations: ["place-1", "place-2", "place-3"]
     });
   });

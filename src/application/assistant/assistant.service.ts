@@ -26,8 +26,11 @@ import {
 } from "@/domain/reviews/review.repository";
 import type { AuthUser } from "@/domain/users/user.entity";
 
-const FALLBACK_MESSAGE =
+const DEFAULT_FALLBACK_MESSAGE = "Podrían gustarte estos lugares.";
+const NOT_UNDERSTOOD_FALLBACK_MESSAGE =
   "No pude entender tu pregunta, pero podrían gustarte estos lugares";
+const NO_RESULTS_FALLBACK_MESSAGE =
+  "No encontré resultados para esa búsqueda, pero podrían gustarte estos lugares";
 const EMPTY_MESSAGE = "No encontré suficientes lugares para recomendarte.";
 const RELEVANT_MESSAGE = "Encontré estos lugares que podrían servirte.";
 const RECOMMENDATION_COUNT = 3;
@@ -61,7 +64,11 @@ export class AssistantService {
         reason: "unsafe_or_off_topic",
         ...logContext
       });
-      return this.fallback("unsafe_or_off_topic", context);
+      return this.fallback(
+        "unsafe_or_off_topic",
+        context,
+        NOT_UNDERSTOOD_FALLBACK_MESSAGE
+      );
     }
 
     if (user.owner) {
@@ -79,19 +86,24 @@ export class AssistantService {
         );
       }
 
+      const reason = intent ? "irrelevant_intent" : "provider_unavailable";
+
       this.logger.log({
         event: "assistant_fallback",
-        reason: intent ? "irrelevant_intent" : "provider_unavailable",
+        reason,
         ...logContext
       });
+
+      return this.fallback(reason, context, getFallbackMessage(reason));
     }
 
-    return this.fallback(user.owner ? "provider_unavailable" : "regular_user", context);
+    return this.fallback("regular_user", context, DEFAULT_FALLBACK_MESSAGE);
   }
 
   private async fallback(
     reason: string,
-    context: AssistantRequestContext
+    context: AssistantRequestContext,
+    message: string
   ): Promise<AssistantResponse> {
     const places = await this.places.listRecommendations({
       limit: RECOMMENDATION_COUNT,
@@ -113,7 +125,7 @@ export class AssistantService {
       resultCount: places.length
     });
 
-    return toResponse(FALLBACK_MESSAGE, places);
+    return toResponse(message, places);
   }
 
   private async recommendFromIntent(
@@ -167,7 +179,11 @@ export class AssistantService {
     });
 
     if (places.length === 0) {
-      return this.fallback("zero_provider_results", context);
+      return this.fallback(
+        "zero_provider_results",
+        context,
+        NO_RESULTS_FALLBACK_MESSAGE
+      );
     }
 
     const reviewsByPlaceId = await this.reviews.listRecentForPlaces(
@@ -237,7 +253,6 @@ export class AssistantService {
       "celiaco",
       "vegano",
       "vegetariano",
-      "kosher",
       "mascotas"
     ];
     const categoryTerms = placeCategories.map((category) => category.toLowerCase());
@@ -247,6 +262,14 @@ export class AssistantService {
       lowerMessage.includes(term)
     );
   }
+}
+
+function getFallbackMessage(reason: string) {
+  if (reason === "irrelevant_intent") {
+    return NOT_UNDERSTOOD_FALLBACK_MESSAGE;
+  }
+
+  return DEFAULT_FALLBACK_MESSAGE;
 }
 
 function toResponse(message: string, places: Place[]): AssistantResponse {
@@ -278,6 +301,18 @@ function featureToTerms(feature: AccessibilityFeature) {
 
   if (feature === "wheelchair") {
     return ["silla", "ruedas", "wheelchair"];
+  }
+
+  if (feature === "accessible_bathroom") {
+    return ["baño", "bano", "baño accesible", "bano accesible"];
+  }
+
+  if (feature === "ramp_available") {
+    return ["rampa", "rampa disponible"];
+  }
+
+  if (feature === "quiet_environment") {
+    return ["silencioso", "silencio", "tranquilo", "espacio silencioso"];
   }
 
   return [feature.replace("_", " ")];

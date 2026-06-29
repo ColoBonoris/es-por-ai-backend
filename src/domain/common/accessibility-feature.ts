@@ -3,9 +3,11 @@ export const accessibilityFeatureValues = [
   "gluten_free",
   "vegetarian",
   "vegan",
-  "kosher",
   "pet_friendly",
-  "visual_accessibility"
+  "visual_accessibility",
+  "accessible_bathroom",
+  "ramp_available",
+  "quiet_environment"
 ] as const;
 
 export type AccessibilityFeature = (typeof accessibilityFeatureValues)[number];

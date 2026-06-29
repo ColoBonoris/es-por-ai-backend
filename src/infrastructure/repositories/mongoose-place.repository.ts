@@ -44,7 +44,7 @@ export class MongoosePlaceRepository implements PlaceRepository {
     const [documents, total] = await Promise.all([
       this.placeModel
         .find(filter)
-        .sort({ verified: -1, rating: -1, name: 1 })
+        .sort(getPlaceListSort(query))
         .skip(skip)
         .limit(pageSize)
         .exec(),
@@ -176,6 +176,14 @@ function buildPlaceFilter(query: {
   }
 
   return filter;
+}
+
+function getPlaceListSort(query: PlaceListQuery): Record<string, 1 | -1> {
+  if (query.filter === "recommended") {
+    return { verified: -1, rating: -1, reviewCount: -1, name: 1 } as const;
+  }
+
+  return { verified: -1, rating: -1, name: 1 } as const;
 }
 
 function getMongoRecommendationSort(sort?: PlaceRecommendationSortCriterion[]) {

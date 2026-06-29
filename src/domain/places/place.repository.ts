@@ -11,6 +11,7 @@ export interface PlaceListQuery extends PaginationQuery {
   query?: string;
   category?: string;
   features?: AccessibilityFeature[];
+  filter?: "recommended";
 }
 
 export type PlaceRecommendationSortField =
